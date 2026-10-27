@@ -1,0 +1,625 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>The Unstandup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap">
+<style>
+/* The Unstandup. Layout: a screen-share board, sibling to The Planning Games. Header shows the meeting time in every zone. Tabs: Play (one question at a time, chat in, paste back), Team portrait (the souvenir), Host notes. Host controls open in their own window (or a panel on the page) so the shared view stays clean.
+   Liberty palette on purpose: it's shown at work and dark reads well over screen share, so one look in both themes. Teal = actions, yellow = the team's numbers. */
+:root{
+  --night:#1A1446;      /* Liberty Blue */
+  --plum:#241D5A;       /* raised surface */
+  --forest:#0B2F4A;     /* toward Liberty Dark Teal */
+  --mint:#78E1E1;       /* Liberty Teal */
+  --gold:#FFD000;       /* Liberty Yellow */
+  --darkteal:#06748C;
+  --white:#FFFFFF;
+  --ink:#F5F5F5;
+  --muted:rgba(245,245,245,.8);
+  --line:rgba(245,245,245,.16);
+  --face:"Roboto",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--night);color:var(--ink)}
+body{font-family:var(--face);font-size:18px;line-height:1.5;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding-inline:20px;padding-block:22px 70px;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3{font-weight:500;line-height:1.08;text-wrap:balance;margin:0}
+p{margin:0}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--mint);outline-offset:3px;border-radius:6px}
+.label{font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--mint)}
+.fine{font-size:13px;color:var(--muted);line-height:1.6}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:0;background:var(--mint);padding:12px 22px;border-radius:999px;font-size:15px;font-weight:700;color:var(--night);transition:filter .15s,transform .15s}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.gold{background:var(--gold)}
+.btn.quiet{background:var(--white);color:var(--darkteal)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:8px 15px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+input[type=text],input[type=date],input[type=time],input[type=number],textarea{background:var(--night);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:9px 12px;box-sizing:border-box;min-width:0}
+textarea{width:100%;min-height:90px;resize:vertical}
+
+header{display:flex;flex-direction:column;gap:14px}
+header h1{font-size:clamp(40px,7vw,64px);font-weight:300;letter-spacing:-.01em}
+header h1 em{color:var(--gold);font-style:normal;font-weight:700}
+.lede{color:var(--muted);max-width:62ch}
+.when{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.when label{display:flex;flex-direction:column;gap:4px}
+.zones{display:flex;flex-wrap:wrap;gap:8px}
+.zone{border:1px solid var(--line);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.zone .t{font-size:15px;font-variant-numeric:tabular-nums}
+.zone .w{font-size:11px;color:var(--muted);letter-spacing:.03em}
+.zone.early .t{color:var(--mint)}
+.zone.late .t{color:var(--gold)}
+.gapnote{font-size:13px;color:var(--muted)}
+.gapnote b{color:var(--gold);font-weight:500}
+
+nav.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-20px;padding-inline:20px;border-bottom:1px solid var(--line);padding-bottom:12px}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1px solid var(--line);background:transparent;border-radius:999px;padding:9px 16px;font-size:13px;letter-spacing:.03em;color:var(--muted);white-space:nowrap}
+.tab[aria-selected="true"]{border-color:var(--gold);background:var(--gold);color:var(--night);font-weight:700}
+
+/* setup */
+.bank{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:720px){.bank{grid-template-columns:1fr}}
+.group{border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--plum);min-width:0}
+.group h3{font-size:22px}
+.group .becomes{font-size:13px;color:var(--gold)}
+.qpick{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:16px;line-height:1.4;padding-top:8px;border-top:1px solid var(--line)}
+.qpick input{width:18px;height:18px;margin-top:2px;accent-color:var(--gold)}
+.qpick .tag{font-size:11px;color:var(--mint);letter-spacing:.06em;text-transform:uppercase;margin-left:6px}
+.qpick .done{font-size:11px;color:var(--gold);margin-left:6px}
+
+/* play */
+.intro{border:1px solid var(--line);border-radius:20px;padding:26px 24px;display:grid;grid-template-columns:1.3fr 1fr;gap:22px;background:radial-gradient(120% 100% at 0% 0%,rgba(120,225,225,.08),transparent 60%),var(--plum)}
+.intro .how{display:flex;flex-direction:column;gap:12px;min-width:0}
+.intro h2{font-size:clamp(36px,6vw,54px)}
+.intro ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.intro .tie{border-left:3px solid var(--gold);padding-left:14px}
+@media (max-width:720px){.intro{grid-template-columns:1fr}}
+.stage{border:1px solid var(--line);border-radius:22px;padding:28px 26px;display:flex;flex-direction:column;gap:20px;min-height:420px;background:linear-gradient(165deg,var(--plum),var(--forest))}
+.stage .top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.count{font-size:13px;color:var(--muted)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.step{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;color:var(--muted)}
+.step.on{border-color:var(--gold);color:var(--night);background:var(--gold);font-weight:700}
+.step.past{color:var(--mint);border-color:rgba(120,225,225,.4)}
+.q{font-size:clamp(28px,4.2vw,44px);line-height:1.2;font-weight:400}
+.sub{font-size:19px;color:var(--muted);max-width:62ch}
+.sub b{color:var(--gold);font-weight:500}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opt{border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;gap:14px;align-items:baseline;font-size:clamp(24px,3.6vw,34px);min-width:0}
+.opt b{font-weight:400;font-size:16px;color:var(--mint)}
+@media (max-width:520px){.opts{grid-template-columns:1fr}}
+.tool{display:flex;flex-direction:column;gap:10px;border:1px dashed var(--line);border-radius:14px;padding:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px;font-size:14px}
+.chip .n{color:var(--gold);font-size:12px}
+.chip button{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;padding:2px 6px;border-radius:999px}
+.chip button:hover{color:var(--ink);background:var(--line)}
+.result{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+.big{font-weight:300;font-size:clamp(34px,6vw,58px);color:var(--gold);font-variant-numeric:tabular-nums;line-height:1.05}
+.out{font-size:17px;line-height:1.6}
+.out b{color:var(--gold);font-weight:500}
+@keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tallies{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.tallies label{display:flex;gap:8px;align-items:center;font-size:15px}
+.tallies input{width:5.5em}
+.ctrl{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:auto;border-top:1px solid var(--line);padding-top:16px}
+.timer{display:flex;align-items:center;gap:12px}
+.ring{width:54px;height:54px}
+.ring circle{fill:none;stroke-width:5}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--gold);stroke-linecap:round;transition:stroke-dashoffset .2s linear}
+.clock{font-size:26px;font-weight:300;font-variant-numeric:tabular-nums;min-width:2.2em}
+.clock.go{color:var(--gold);font-weight:700}
+
+/* shared viz */
+.cloud{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:4px 16px;padding:8px 0;line-height:1.15}
+.cloud span{font-weight:500;white-space:nowrap}
+.cloud span:nth-child(3n+1){color:var(--gold)}
+.cloud span:nth-child(3n+2){color:var(--mint)}
+.cloud span:nth-child(3n){color:var(--ink)}
+.split{display:flex;height:42px;border-radius:10px;overflow:hidden}
+.split span{display:flex;align-items:center;padding-inline:12px;font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;min-width:0}
+.split .a{background:var(--mint);color:var(--night)}
+.split .b{background:var(--gold);color:var(--night);justify-content:flex-end}
+
+/* portrait */
+.portrait{border-radius:24px;padding:30px 28px;display:flex;flex-direction:column;gap:26px;background:radial-gradient(90% 70% at 100% 0%,rgba(255,208,0,.10),transparent 60%),radial-gradient(80% 70% at 0% 100%,rgba(120,225,225,.10),transparent 60%),var(--plum);border:1px solid var(--line)}
+.ptop{display:flex;justify-content:space-between;gap:16px;align-items:end;flex-wrap:wrap}
+.ptop h2{font-size:clamp(34px,6vw,60px);font-weight:300}
+.ptop h2 b{color:var(--gold);font-weight:900}
+.ptop .meta{font-size:13px;color:var(--muted);text-align:right}
+.example{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--night);background:var(--mint);border-radius:999px;padding:4px 12px;font-weight:700;align-self:flex-start}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.tile{border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;min-width:0;background:rgba(26,20,70,.55)}
+.tile .v{font-size:clamp(38px,5vw,54px);font-weight:900;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+.tile .k{font-size:16px;line-height:1.35}
+.tile .s{font-size:12.5px;color:var(--muted)}
+.tile.clockt .v{color:var(--mint);font-size:clamp(26px,3.4vw,34px);font-weight:700}
+.pgrid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+@media (max-width:760px){.pgrid{grid-template-columns:1fr}}
+.pblock{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pblock h3{font-size:14px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--mint)}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar .lbl{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-bottom:4px;gap:10px}
+.places{font-size:17px;line-height:1.7}
+.places b{color:var(--gold);font-weight:700}
+.pfoot{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:16px;color:var(--muted)}
+
+/* host */
+.host{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.msg{border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px;background:var(--plum);min-width:0}
+.msg.wide{grid-column:1/-1}
+.msg h3{font-size:24px}
+.msg ol,.msg ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:7px;font-size:16.5px}
+.msg b{color:var(--gold);font-weight:500}
+.msg i{color:var(--mint);font-style:normal}
+pre{white-space:pre-wrap;font-family:var(--face);font-size:15px;background:var(--night);border:1px solid var(--line);border-radius:10px;padding:12px;margin:0;overflow-wrap:anywhere}
+.status{font-size:12.5px;color:var(--muted)}
+@media (max-width:720px){.host{grid-template-columns:1fr}}
+/* GO moment */
+.stage{transition:border-color .3s,box-shadow .3s}
+.stage.go{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 48px rgba(255,208,0,.22)}
+.stage.go .clock{font-size:40px}
+.q.small{font-size:clamp(22px,3vw,30px)}
+.waiting{border-top:1px solid var(--line);padding-top:18px;font-size:19px;color:var(--muted)}
+
+/* host controls: a separate window, or a panel docked on this page */
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+body.remote{font-size:16px}
+body.remote main{max-width:none;padding:16px;gap:14px}
+#drawer{position:fixed;z-index:30;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(440px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box;padding:16px;background:var(--night);border:1px solid var(--gold);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.phead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--plum);min-width:0}
+.pq{font-size:19px;line-height:1.35}
+.panel .tool{background:var(--plum)}
+.panel .tool textarea{min-height:130px}
+.panel .tab{padding:7px 13px}
+.panel .fine i,.msg .fine i{color:var(--mint);font-style:normal}
+.snap{width:100%;border-radius:10px;border:1px solid var(--line);margin-block:8px}
+.snaphold{position:fixed;left:-12000px;top:0;width:1060px;padding:24px;background:var(--night);box-sizing:border-box}
+/* host entry */
+.marker{border:1px dashed var(--gold);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.mk{font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+.abbtn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.abbtn button{border:0;border-radius:14px;padding:16px 10px;font-weight:700;font-size:17px;color:var(--night);display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .1s,filter .15s}
+.abbtn button span{font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.abbtn [data-plus="a"]{background:var(--mint)}
+.abbtn [data-plus="b"]{background:var(--gold)}
+.abbtn button:hover{filter:brightness(1.08)}
+.abbtn button:active{transform:scale(.97)}
+.stage .opts .opt{padding:14px 18px;font-size:clamp(22px,3vw,30px)}
+@media (prefers-reduced-motion:reduce){.stage{transition:none}}
+@media (prefers-reduced-motion:reduce){.result{animation:none}.ring .fg{transition:none}.btn:hover{transform:none}}
+</style>
+
+<main>
+  <header>
+    <span class="label">Team VeriFidity · twenty minutes, zero story points</span>
+    <h1>The <em>Un</em>standup</h1>
+    <p class="lede">A few light questions, answered together in chat. Every answer adds to one picture of who we are.</p>
+    <span class="label" style="margin-bottom:-6px">we start at</span>
+    <div class="zones" id="zones" aria-label="Start time in each location"></div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <section id="view" aria-live="polite"></section>
+</main>
+<aside id="drawer" class="panel" aria-label="Host controls" hidden></aside>
+
+<script>
+(function(){
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- meeting time across the team ---------- */
+const ZONES=[["Seattle","America/Los_Angeles","Seattle"],["Texas","America/Chicago","Texas"],["Topsham · New Hampshire · Georgia · Ontario","America/New_York","Topsham"],["Halifax","America/Halifax","Halifax"],["India","Asia/Kolkata","India"]];
+const HOME='America/New_York';
+function offsetMin(d,tz){const o={};new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',hour12:false}).formatToParts(d).forEach(p=>o[p.type]=p.value);
+  return Math.round((Date.UTC(+o.year,+o.month-1,+o.day,(+o.hour)%24,+o.minute)-d.getTime())/60000);}
+function etToDate(ds,ts){const[y,m,d]=ds.split('-').map(Number),[h,mi]=ts.split(':').map(Number);
+  const g=new Date(Date.UTC(y,m-1,d,h,mi));const g2=new Date(g.getTime()-offsetMin(g,HOME)*60000);return new Date(Date.UTC(y,m-1,d,h,mi)-offsetMin(g2,HOME)*60000);}
+let when=store.get('cg-when',{date:'2026-10-30',time:'10:00'});if(!when||!when.date||!when.time)when={date:'2026-10-30',time:'10:00'};
+const startDate=()=>etToDate(when.date,when.time);
+const tfmt=(d,tz)=>d.toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'});
+const hourIn=(d,tz)=>+d.toLocaleString('en-US',{timeZone:tz,hour:'numeric',hour12:false})%24;
+function drawZones(){const s=startDate();
+  document.getElementById('zones').innerHTML=ZONES.map(([w,tz])=>{const h=hourIn(s,tz);return`<div class="zone${h<7?' early':h>=17?' late':''}"><span class="t">${tfmt(s,tz)}</span><span class="w">${w}</span></div>`}).join('');}
+function gapNote(){const s=startDate();const gap=(offsetMin(s,'Asia/Kolkata')-offsetMin(s,HOME))/60;const ist=hourIn(s,'Asia/Kolkata');
+  let n=`India is <b>${Math.floor(gap)}${gap%1?'½':''} hours</b> ahead that day.`;
+  if(gap===10.5)n+=' Maine falls back on Nov 1 and India doesn’t change its clocks, so the gap is half an hour wider than in October.';
+  if(ist>=23||ist<5)n+=' That’s after their shift ends at 11 PM. Worth moving earlier.';
+  else if(ist>=16&&ist<18)n+=' That’s their commute window, so some may join from a phone.';
+  else if(ist>=21)n+=' That’s late in their shift. Keep it short.';
+  return n;}
+
+/* ---------- question bank ---------- */
+const BANK=[
+ {id:'langs',kind:'num',tag:'Languages',q:"How many languages can you hold a conversation in?",guess:"Guess first: how many languages do we speak, all of us added together?",label:"languages spoken between us",def:1},
+ {id:'cities',kind:'num',tag:'Cities and towns',q:"How many different cities or towns have you lived in?",guess:"Guess first: how many cities and towns have we lived in, all together?",label:"cities and towns we've called home",def:1},
+ {id:'cups',kind:'num',tag:'Tea and coffee',q:"How many cups of tea or coffee do you drink on a normal day?",guess:"Guess first: how many cups of tea and coffee do we drink in a day, all together?",label:"cups of tea and coffee a year",yearly:true,def:1},
+ {id:'years',kind:'num',tag:'Years in the trade',q:"How many years have you done this kind of work?",guess:"Guess first: how many years of experience are on this call?",label:"years of experience between us",def:0},
+ {id:'pets',kind:'num',tag:'Pets and plants',q:"How many pets and houseplants live with you, combined?",guess:"Guess first: how many pets and houseplants do we look after?",label:"pets and houseplants in our care",def:0},
+ {id:'word',kind:'words',tag:'Favorite word',q:"Your favorite word in a language other than English.",label:"Favorite words, in every language we speak",def:1,split:false},
+ {id:'comfort',kind:'words',tag:'Comfort food',q:"Your comfort food, in a word or two.",label:"What we eat when we need comfort",def:1,split:true},
+ {id:'sound',kind:'words',tag:'What you can hear',q:"What can you hear right now, besides this call?",label:"What our day sounds like",def:0,split:true},
+ {id:'desk',kind:'words',tag:'On your desk',q:"One thing on your desk right now that isn't a computer.",label:"On our desks",def:0,split:true},
+ {id:'friend',kind:'words',tag:'One word from a friend',q:"One word a good friend would use to describe you.",label:"How our friends describe us",def:0,split:true},
+ {id:'chai',kind:'ab',tag:'Chai or coffee',a:"Chai",b:"Coffee",def:1},
+ {id:'owl',kind:'ab',tag:'Early bird or night owl',a:"Early bird",b:"Night owl",def:1},
+ {id:'rain',kind:'ab',tag:'Rain or snow',a:"Rainy day",b:"Snowy day",def:0},
+ {id:'beach',kind:'ab',tag:'Beach or mountains',a:"Beach",b:"Mountains",def:0},
+ {id:'spice',kind:'ab',tag:'Sweet or spicy',a:"Sweet",b:"Spicy",def:0},
+ {id:'pet',kind:'ab',tag:'Cats or dogs',a:"Cats",b:"Dogs",def:0},
+ {id:'home',kind:'places',tag:'Where we started',q:"Where did you grow up? A town or city is plenty.",label:"Where we started out",def:1}];
+const KINDS={
+ num:{h:"Numbers",becomes:"A big stat tile. A timed team-total guess first, then everyone's real number."},
+ words:{h:"A word or two",becomes:"A word cloud. Answers that repeat get bigger."},
+ ab:{h:"This or that",becomes:"A split bar. One letter each, A or B."},
+ places:{h:"Places",becomes:"A count of how many places we come from, and the list."}};
+const B=Object.fromEntries(BANK.map(q=>[q.id,q]));
+
+/* ---------- state ---------- */
+let sel=store.get('cg2-sel',BANK.filter(q=>q.def).map(q=>q.id));if(!Array.isArray(sel))sel=BANK.filter(q=>q.def).map(q=>q.id);sel=sel.filter(id=>B[id]);
+let ans=store.get('cg2-ans',{});if(typeof ans!=='object'||!ans)ans={};
+let ignore=store.get('cg2-ignore',[]);if(!Array.isArray(ignore))ignore=[];
+let people=String(store.get('cg2-people','')||'').replace(/\D/g,'');
+const save=()=>{store.set('cg2-sel',sel);store.set('cg2-ans',ans);store.set('cg2-ignore',ignore)};
+let tab=store.get('cg2-tab','play');if(!['play','portrait','host'].includes(tab))tab='play';
+let qi=+store.get('cg2-qi',-1);if(!isFinite(qi))qi=-1;let step={};let refocus=null;
+const order=()=>BANK.filter(q=>sel.includes(q.id));
+
+const tabsEl=document.getElementById('tabs'),view=document.getElementById('view'),drawerEl=document.getElementById('drawer');
+const TABS=[['play','Play'],['portrait','Team portrait'],['host','Host notes']];
+function go(t){tab=t;store.set('cg2-tab',t);stopTimer();render()}
+function drawTabs(){tabsEl.innerHTML=TABS.map(([k,v])=>`<button class="tab" role="tab" aria-selected="${k===tab}" data-tab="${k}">${v}</button>`).join('');
+  tabsEl.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>go(b.dataset.tab));}
+
+/* ---------- host controls: a panel on this page, or their own window once a click there proves it works ---------- */
+let remote=null,live=false,drawer=false,blocked=false;
+const popupOpen=()=>{try{return!!(remote&&!remote.closed&&remote.document.getElementById('r'))}catch(e){return false}};
+const remoteOn=()=>live&&popupOpen();
+const hosting=()=>remoteOn()||drawer;
+const docs=()=>{try{return remoteOn()?[document,remote.document]:[document]}catch(e){return[document]}};
+function ctrlRoot(){if(remoteOn())return remote.document.getElementById('r');if(drawer)return drawerEl;return null}
+function openPanel(){drawer=true;render()}
+function openRemote(){
+  drawer=true;
+  if(popupOpen()){try{remote.focus()}catch(e){}render();return}
+  let w=null;try{w=window.open('','unstandup_host','popup,width=560,height=860')}catch(e){w=null}
+  if(!w){blocked=true;render();return}
+  try{
+    remote=w;live=false;blocked=false;
+    const css=[...document.querySelectorAll('style,link[rel="stylesheet"]')].map(n=>n.outerHTML).join('');
+    w.document.open();
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Host controls · The Unstandup</title>${css}</head><body class="remote"><main id="r" class="panel"></main></body></html>`);
+    w.document.close();
+    if(!popupOpen()){try{w.close()}catch(e){}remote=null;blocked=true;render();return}
+    const r=w.document.getElementById('r');
+    r.innerHTML=`<div class="pcard"><span class="label" style="color:var(--gold)">host controls</span><p class="pq">Click Connect to move the controls into this window.</p>
+      <div class="row"><button class="btn gold" id="connect">Connect</button></div>
+      <p class="fine">If Connect doesn't respond, close this window. The controls stay in the panel on the main page.</p></div>`;
+    w.document.getElementById('connect').onclick=()=>{live=true;drawer=false;render();try{w.focus()}catch(e){}};
+    w.addEventListener('keydown',onKey);w.addEventListener('keyup',onKeyUp);
+  }catch(e){try{w.close()}catch(_){}remote=null;live=false;blocked=true;render();return}
+  render();try{w.focus()}catch(e){}}
+function closeHost(){try{if(popupOpen())remote.close()}catch(e){}remote=null;live=false;drawer=false;render()}
+setInterval(()=>{if(remote&&!popupOpen()){const was=live;remote=null;live=false;if(was)drawer=true;render()}},1000);
+
+/* ---------- guess countdown: runs off the real clock, so a background tab can't stretch it ---------- */
+const TLEN=30;let tState='idle',tEnd=0,tick=null;
+function stopTimer(){tState='idle';clearInterval(tick);tick=null;paintTimer()}
+function startTimer(){tEnd=Date.now()+TLEN*1000;tState='run';clearInterval(tick);tick=setInterval(paintTimer,200);paintTimer()}
+function paintTimer(){
+  if(tState==='run'&&Date.now()>=tEnd){tState='go';clearInterval(tick);tick=null}
+  const left=tState==='run'?Math.max(0,(tEnd-Date.now())/1000):tState==='go'?0:TLEN;const C=2*Math.PI*23;
+  docs().forEach(d=>{
+    d.querySelectorAll('[data-clock]').forEach(c=>{c.textContent=tState==='go'?'SEND':Math.ceil(left);c.classList.toggle('go',tState==='go')});
+    d.querySelectorAll('[data-ring]').forEach(fg=>{fg.style.strokeDasharray=C;fg.style.strokeDashoffset=C*(1-left/TLEN)});
+    d.querySelectorAll('[data-tbtn]').forEach(b=>b.textContent=tState==='run'?'Restart':tState==='go'?`Run it again`:`Start ${TLEN}s`);
+    d.querySelectorAll('[data-held]').forEach(e=>e.innerHTML=tState==='go'?'<b>Send it.</b> Guesses go in the chat now.':tState==='run'?'Type your guess. Hold it until the timer says <b>SEND</b>.':'Type your guess, but hold it. The timer will tell you when to <b>SEND</b>.');
+    d.querySelectorAll('.stage').forEach(s=>s.classList.toggle('go',tState==='go'));});}
+document.addEventListener('visibilitychange',paintTimer);window.addEventListener('focus',paintTimer);
+const timerHTML=btn=>`<div class="timer"><svg class="ring" viewBox="0 0 54 54" aria-hidden="true"><circle class="bg" cx="27" cy="27" r="23"/><circle class="fg" data-ring cx="27" cy="27" r="23" transform="rotate(-90 27 27)"/></svg><span class="clock" data-clock role="timer" aria-live="off">${TLEN}</span>${btn?'<button class="btn sm quiet" data-tbtn>Start 30s</button>':''}</div>`;
+
+/* ---------- keys, in either window ---------- */
+function typing(t){return t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)}
+function onKey(e){if(e.ctrlKey||e.metaKey||e.altKey||typing(e.target))return;const k=e.key;
+  if(k==='h'||k==='H'){e.preventDefault();if(remoteOn()&&e.target.ownerDocument===document){try{remote.focus()}catch(_){}}else if(!remoteOn()){drawer=!drawer;render()}return}
+  if(tab!=='play')return;const c=cur();if(!c)return;
+  if(k===' '){e.preventDefault();if(c.q&&c.timed&&tState!=='run')startTimer()}
+  else if(k==='ArrowRight'){e.preventDefault();advance()}
+  else if(k==='ArrowLeft'){e.preventDefault();back()}}
+function onKeyUp(e){if(e.key===' '&&e.target&&e.target.tagName==='BUTTON')e.preventDefault()}
+document.addEventListener('keydown',onKey);document.addEventListener('keyup',onKeyUp);
+
+/* ---------- reading pasted Teams chat ---------- */
+const NOISE=/^(like|likes|reply|replies|edited|\(edited\)|seen.*|\d+\s*(likes?|reactions?|replies)|has context menu|message|today|yesterday|pass|skip|n\/a)$/i;
+const STAMP=/\b\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)?\b/i; /* a Teams header line: a name followed by a time */
+const MARK=/^\s*[—–-]+\s*\d+\s*·/;                     /* our own question marker, pasted back in with the answers */
+function lines(text){return String(text||'').split(/\r?\n/).filter(l=>!STAMP.test(l)&&!MARK.test(l)).map(l=>l
+    .replace(/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/g,'')
+    .replace(/\(?edited\)?/gi,'')
+    .replace(/^[\s,.\-–—:]+|[\s,.\-–—:!?]+$/g,'').trim())
+  .filter(l=>l&&!NOISE.test(l)&&!ignore.includes(l.toLowerCase()));}
+function nums(text){const out=[];lines(text).forEach(l=>{const m=l.match(/(^|[^\d])(\d+(\.\d+)?)/);if(m){const n=parseFloat(m[2]);if(isFinite(n)&&n<100000)out.push(n)}});return out;}
+function phrases(text,split){const out=[];lines(text).forEach(l=>(split?l.split(/\s*[,;]\s*/):[l]).forEach(p=>{p=p.trim();if(p&&p.length<=60&&!ignore.includes(p.toLowerCase()))out.push(p)}));return out;}
+function tally(list){const m=new Map();list.forEach(p=>{const k=p.toLowerCase();if(!m.has(k))m.set(k,{t:p,n:0});m.get(k).n++});return[...m.values()].sort((a,b)=>b.n-a.n||a.t.localeCompare(b.t));}
+/* "A", "b!", "a - chai", "Chai", "chai please" count; "a lot of coffee" doesn't */
+function abPick(t,L,W){const bare=t.replace(/[^a-z]/g,'');const stem=W.split(' ')[0].replace(/s$/,'');
+  return bare===L||t.startsWith(W)||(stem.length>=3&&t.startsWith(stem))||new RegExp('^'+L+'\\s*[-–—:.)]').test(t)||t.startsWith(L+' '+stem);}
+function abCount(text,q){let a=0,b=0;const A=q.a.toLowerCase(),Bw=q.b.toLowerCase();
+  lines(text).forEach(l=>{const t=l.toLowerCase().trim();if(abPick(t,'a',A))a++;else if(abPick(t,'b',Bw))b++;});return{a,b};}
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const hrs=h=>Math.floor(h)+(h%1?'½':'');
+const fmtN=n=>Math.round(n).toLocaleString('en-US');
+const cap=s=>s.replace(/^./,c=>c.toUpperCase());
+
+/* ---------- where the game is ---------- */
+function has(q){const a=ans[q.id];if(!a)return false;if(q.kind==='num')return(a.vals||[]).length>0;if(q.kind==='ab')return(+a.a||0)+(+a.b||0)>0;return(a.items||[]).length>0;}
+const stepsFor=q=>q.kind==='num'?['Guess','Real numbers']:['Answers'];
+function cur(){const Q=order();if(!Q.length)return null;
+  if(qi>=Q.length)qi=Q.length-1;if(qi<-1)qi=-1;if(qi<0)return{Q,q:null};
+  const q=Q[qi];const a=ans[q.id]||(ans[q.id]={});const steps=stepsFor(q);
+  let s=step[q.id];if(s==null)s=step[q.id]=(q.kind==='num'&&(a.vals||[]).length)?1:0;if(s>=steps.length)s=step[q.id]=steps.length-1;
+  return{Q,q,a,steps,s,timed:q.kind==='num'&&s===0,atEnd:s>=steps.length-1,last:qi>=Q.length-1};}
+const advLabel=c=>c.q==null?"Let's begin":!c.atEnd?'Real numbers':c.last?'See the team portrait':'Next question';
+function advance(){const c=cur();if(!c||tab!=='play')return;stopTimer();
+  if(c.q==null)qi=0;else if(!c.atEnd)step[c.q.id]=c.s+1;else if(c.last){go('portrait');return}else qi++;
+  store.set('cg2-qi',qi);
+  if(!hosting()){try{openRemote()}catch(e){drawer=true}}
+  render();}
+function back(){const c=cur();if(!c||tab!=='play'||c.q==null)return;stopTimer();
+  if(c.s>0)step[c.q.id]=c.s-1;else{qi--;store.set('cg2-qi',qi)}render();}
+function promptText(q,s){if(q.kind==='num')return s===0?q.guess:q.q;if(q.kind==='ab')return`${q.a} or ${q.b}?`;return q.q;}
+function markerText(q,s){const n=qi+1;
+  if(q.kind==='num'&&s===0)return`— ${n} · ${q.tag} · guesses — ${q.guess.replace(/^Guess first: /,'Guess the team total: ')} Hold it until the timer says SEND.`;
+  if(q.kind==='num')return`— ${n} · ${q.tag} · real numbers — ${q.q} Send whenever you're ready.`;
+  if(q.kind==='ab')return`— ${n} · ${q.tag} — ${q.a} or ${q.b}? Reply A or B.`;
+  return`— ${n} · ${q.tag} — ${q.q}`;}
+
+/* ---------- render ---------- */
+function render(){drawTabs();
+  if(tab==='play')renderPlay();else if(tab==='portrait')renderPortrait();else renderHost();
+  drawerEl.hidden=!drawer||remoteOn();
+  try{renderControls()}catch(e){remote=null;live=false;drawer=true;drawerEl.hidden=false;try{renderControls()}catch(_){}}
+  paintTimer();}
+
+/* the shared view: the question, and answers filling in live */
+function renderPlay(){const c=cur();const ctl=!hosting();
+  if(!c){view.innerHTML=`<p class="empty">Questions coming soon.</p>`;return}
+  if(c.q==null){view.innerHTML=`<div class="intro"><div class="how"><span class="label">${c.Q.length} questions · about ${c.Q.length*2} minutes</span><h2>The only agenda item</h2>
+     <ol><li>A question goes up in chat. Answer it there. No blockers, no updates, no story points.</li><li>Number questions start with a guess at the team total. Hold your guess until the timer says <b>SEND</b>, so nobody's guess nudges anyone else's.</li><li>Everything else, send whenever you're ready.</li><li>At the end, every answer comes together in a portrait of the team.</li></ol>
+     <p class="out"><b>Pass is always fine.</b></p></div>
+     <div class="how"><span class="label">why</span><p class="tie">We spend our days solving problems together across five time zones. Here are twenty minutes to find out who's on the other end of the call.</p>
+     ${ctl?`<div class="row" style="margin-top:auto"><button class="btn gold" id="begin">Let's begin</button></div>`:''}</div></div>`;
+    const b=document.getElementById('begin');if(b)b.onclick=advance;return}
+  const{q,a,steps,s,timed}=c;
+  const stepsHTML=steps.length>1?`<div class="steps">${steps.map((t,k)=>`<span class="step${k===s?' on':k<s?' past':''}">${t}</span>`).join('')}</div>`:'';
+  let body;
+  if(timed)body=`<p class="q">${esc(q.guess)}</p><p class="sub" data-held></p>`;
+  else if(q.kind==='num')body=`<p class="q">${esc(q.q)}</p><p class="sub">Your real number this time. Send whenever you're ready.</p>${resultHTML(q,a)}`;
+  else if(q.kind==='ab')body=`<div class="opts"><div class="opt"><b>A</b><span>${esc(q.a)}</span></div><div class="opt"><b>B</b><span>${esc(q.b)}</span></div></div><p class="sub">Which are you? Reply A or B, whenever you're ready.</p>${resultHTML(q,a)}`;
+  else body=`<p class="q">${esc(q.q)}</p><p class="sub">${q.kind==='words'?'Send whenever you’re ready. Matching answers grow bigger.':'Send whenever you’re ready. Every hometown counts.'}</p>${resultHTML(q,a)}`;
+  const ctrl=timed||ctl?`<div class="ctrl">${timed?timerHTML(ctl):'<span></span>'}${ctl?`<div class="row"><button class="btn sm ghost" id="openAns">Host controls</button><button class="btn sm ghost" id="prev">Back</button><button class="btn${c.atEnd?'':' gold'}" id="adv">${advLabel(c)}</button></div>`:''}</div>`:'';
+  view.innerHTML=`<div class="stage"><div class="top"><span class="count">Question ${qi+1} of ${c.Q.length}</span>${stepsHTML}</div>${body}${ctrl}</div>`;
+  view.querySelectorAll('[data-tbtn]').forEach(b=>b.onclick=startTimer);
+  const p=document.getElementById('prev'),n=document.getElementById('adv'),oa=document.getElementById('openAns');if(p)p.onclick=back;if(n)n.onclick=advance;if(oa)oa.onclick=openRemote;}
+
+const waiting=()=>`<p class="waiting">Waiting on the first brave answer…</p>`;
+function resultHTML(q,a){
+  if(q.kind==='num'){const vals=a.vals||[];if(!vals.length)return waiting();const tot=sum(vals);const gl=guessLine(q,a);
+    return`<div class="result"><span class="label">all of us · ${vals.length} answer${vals.length===1?'':'s'} so far</span><p class="big">${fmtN(tot)}${q.yearly?' a day':''}</p>
+      <p class="out">${q.yearly?`That's <b>${fmtN(tot*365)}</b> cups of tea and coffee a year. Somebody thank the kettle.`:esc(cap(q.label))+'.'}</p>${gl?`<p class="out">${gl}</p>`:''}</div>`;}
+  if(q.kind==='ab'){const na=+a.a||0,nb=+a.b||0;if(!(na+nb))return waiting();
+    return`<div class="result">${splitBar(q,na,nb)}<p class="out">${na===nb?'A perfect tie. Somebody unmute and break it.':`We lean <b>${esc(na>nb?q.a:q.b)}</b>. Anyone want to make the case for ${esc(na>nb?q.b:q.a)}?`}</p></div>`;}
+  const tl=tally(a.items||[]);if(!tl.length)return waiting();
+  return`<div class="result">${q.kind==='places'?`<p class="big">${tl.length} place${tl.length===1?'':'s'}</p>`:''}${cloudHTML(tl)}</div>`;}
+/* guesses never reach the shared screen until the real total is in */
+function guessLine(q,a){const g=a.guesses||[];const tot=sum(a.vals||[]);if(!g.length||!tot)return'';
+  const err=x=>Math.abs(x-tot)/tot;const best=g.slice().sort((x,y)=>err(x)-err(y))[0];const off=Math.round(err(best)*100);
+  let h=off?`Closest guess: <b>${fmtN(best)}</b>, ${off}% off. Whoever guessed it, take a bow.`:`Someone guessed exactly <b>${fmtN(best)}</b>. Suspiciously good.`;
+  if(g.length>=3){const s=g.slice().sort((x,y)=>x-y);const med=s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2;
+    if(med!==best)h+=`<br>Line up all ${g.length} guesses from low to high, and the middle of the pack lands at ${fmtN(med)}.`;}
+  return h;}
+function splitBar(q,na,nb){const t=na+nb;const pa=Math.round(na/t*100);
+  return`<div class="split" role="img" aria-label="${pa}% ${esc(q.a)}, ${100-pa}% ${esc(q.b)}"><span class="a" style="width:${pa}%">${pa>=12?`${esc(q.a)} ${pa}%`:''}</span><span class="b" style="width:${100-pa}%">${100-pa>=12?`${esc(q.b)} ${100-pa}%`:''}</span></div>`;}
+function cloudHTML(tl,max=40){const top=tl.slice(0,max);const hi=Math.max(...top.map(w=>w.n)),lo=Math.min(...top.map(w=>w.n));
+  const mix=top.slice().sort((x,y)=>(x.t.length*7+x.n*13)%11-(y.t.length*7+y.n*13)%11);
+  return`<div class="cloud">${mix.map(w=>{const f=hi===lo?1:(w.n-lo)/(hi-lo);return`<span style="font-size:${Math.round(20+f*36)}px">${esc(w.t)}</span>`}).join('')}</div>`;}
+
+/* the host's side: the marker, the countdown, and the answer boxes */
+function renderControls(){const root=ctrlRoot();if(!root)return;const c=cur();
+  let h=`<div class="phead"><span class="label" style="color:var(--gold)">host controls · only you see these</span>${remoteOn()?'':'<button class="btn sm ghost" data-hide>Hide · H</button>'}</div>
+    <div class="pcard"><span class="label">on the shared screen</span><div class="row">${TABS.map(([k,v])=>`<button class="tab" aria-selected="${k===tab}" data-show="${k}">${v}</button>`).join('')}</div></div>`;
+  if(tab==='play'&&c){
+    if(c.q==null)h+=`<div class="pcard"><span class="count">Intro · the only agenda item</span><p class="fine">Paste the opening message into chat, then begin.</p><div class="row"><button class="btn gold" data-adv>Let's begin</button></div></div>`;
+    else{const{q,a,steps,s,timed}=c;
+      h+=`<div class="pcard"><span class="count">Question ${qi+1} of ${c.Q.length}${steps.length>1?` · ${steps[s]}`:''}</span><p class="pq">${esc(promptText(q,s))}</p>
+        <div class="marker"><span class="label">first, post this in chat</span><p class="mk" data-mk>${esc(markerText(q,s))}</p>
+          <div class="row"><button class="btn sm gold" data-copymk>Copy question marker</button><span class="status" data-mkst></span></div></div>
+        ${timed?`<span class="label">then the countdown</span>${timerHTML(true)}`:''}
+        <div class="row"><button class="btn sm ghost" data-back>Back</button><button class="btn${c.atEnd?'':' gold'}" data-adv>${advLabel(c)}</button></div></div>`;
+      h+=toolHTML(q,a,s);}
+  }else if(tab==='portrait')h+=`<div class="pcard"><p class="pq">The team portrait is on screen.</p><div class="row"><button class="btn" data-snap>Make portrait image</button></div><div class="status" data-snapst></div></div>`;
+  else if(tab==='host')h+=`<p class="fine">Host notes are on screen. Switch to Play before you share.</p>`;
+  h+=`<p class="fine">Keys: <i>Space</i> starts the countdown · <i>→</i> next · <i>←</i> back${remoteOn()?'':' · <i>H</i> hides this panel'}</p>`;
+  root.innerHTML=h;
+  const $=s=>root.querySelector(s),$$=s=>root.querySelectorAll(s);
+  $$('[data-show]').forEach(b=>b.onclick=()=>go(b.dataset.show));
+  $$('[data-adv]').forEach(b=>b.onclick=advance);$$('[data-back]').forEach(b=>b.onclick=back);
+  $$('[data-tbtn]').forEach(b=>b.onclick=startTimer);
+  const hd=$('[data-hide]');if(hd)hd.onclick=()=>{drawer=false;render()};
+  const sn=$('[data-snap]');if(sn)sn.onclick=()=>snapPortrait($('[data-snapst]'));
+  const cm=$('[data-copymk]');if(cm)cm.onclick=async()=>{const el=$('[data-mk]'),st=$('[data-mkst]');const W=root.ownerDocument.defaultView;
+    try{await W.navigator.clipboard.writeText(el.textContent);st.textContent='Copied. Paste it into chat.'}
+    catch(e){const r=root.ownerDocument.createRange();r.selectNodeContents(el);const g=W.getSelection();g.removeAllRanges();g.addRange(r);st.textContent='Selected. Press Ctrl+C, then paste it into chat.'}};
+  if(tab==='play'&&c&&c.q)wireTool(root,c.q,c.a);
+  if(refocus){const i=root.querySelector(`[data-tool="${refocus}"] [data-onein]`);if(i)i.focus();refocus=null}}
+
+/* each entry box takes a paste from chat in bulk, or one answer at a time */
+function entryHTML(kind,label,ph,one,chips,hint){
+  return`<div class="tool" data-tool="${kind}"><span class="label">${label}</span>
+    <textarea data-bulk aria-label="${esc(label)}" placeholder="${esc(ph)}"></textarea>
+    <div class="row"><button class="btn sm" data-addbulk>Add these</button><span class="status" data-st></span></div>
+    <form class="row" data-one><input type="text" data-onein placeholder="${esc(one)}" aria-label="${esc(one)}"><button class="btn sm ghost" type="submit">Add</button></form>
+    ${chips}${hint?`<p class="fine">${hint}</p>`:''}</div>`;}
+const numChips=list=>list.length?`<div class="chips">${list.map((v,k)=>`<span class="chip">${v}<button data-rm="${k}" aria-label="Remove ${v}">×</button></span>`).join('')}</div>`:'';
+function toolHTML(q,a,s){
+  const pasteHint='Copy from your marker down. Names, times and the marker itself are dropped.';
+  if(q.kind==='num'){const g=a.guesses||[],v=a.vals||[];
+    const gTool=entryHTML('guesses',`their guesses · ${g.length} in · hidden until the real total is in`,'Paste the guesses from chat','Add one guess',numChips(g),s===0?pasteHint:'');
+    if(s===0)return gTool;
+    return entryHTML('vals',`their real numbers · ${v.length} in · ${fmtN(sum(v))} total`,'Paste the real numbers from chat','Add one number',numChips(v),pasteHint)+gTool;}
+  if(q.kind==='ab'){const na=+a.a||0,nb=+a.b||0;
+    return`<div class="tool" data-tool="ab"><span class="label">their picks · tap as they come in</span>
+      <div class="abbtn"><button data-plus="a"><span>+1 A</span>${esc(q.a)}</button><button data-plus="b"><span>+1 B</span>${esc(q.b)}</button></div>
+      <div class="tallies"><label>A <input type="number" inputmode="numeric" min="0" data-ta value="${na}" aria-label="Count for ${esc(q.a)}"></label><label>B <input type="number" inputmode="numeric" min="0" data-tb value="${nb}" aria-label="Count for ${esc(q.b)}"></label><span class="status">Fix a miscount here.</span></div>
+      <span class="label">or paste the picks from chat</span><textarea data-bulk aria-label="Picks from chat" placeholder="A\nb\nChai"></textarea>
+      <div class="row"><button class="btn sm" data-addbulk>Count these</button><span class="status" data-st></span></div></div>`;}
+  const tl=tally(a.items||[]);
+  const chips=tl.length?`<div class="chips">${tl.map(w=>`<span class="chip">${esc(w.t)}${w.n>1?` <span class="n">×${w.n}</span>`:''}<button data-rmw="${esc(w.t.toLowerCase())}" aria-label="Remove ${esc(w.t)}">×</button></span>`).join('')}</div>`:'';
+  return entryHTML('items',`their answers · ${(a.items||[]).length} in`,q.kind==='places'?'Hyderabad\nGuntur\nBangor, Maine':'biryani\nmac and cheese\ndosa','Add one answer',chips,pasteHint+' Tap × on anything that isn\'t an answer and it stays out.');}
+function wireTool(root,q,a){
+  root.querySelectorAll('[data-tool]').forEach(t=>{const kind=t.dataset.tool;const $=s=>t.querySelector(s);
+    const bulk=$('[data-bulk]'),st=$('[data-st]');const dk='draft_'+kind;
+    if(bulk){bulk.value=a[dk]||'';bulk.oninput=()=>{a[dk]=bulk.value;save()}}
+    const none=msg=>{if(st)st.textContent=msg};
+    if(kind==='vals'||kind==='guesses'){
+      $('[data-addbulk]').onclick=()=>{const n=nums(bulk.value);if(!n.length)return none('No numbers found in that paste.');a[kind]=[...(a[kind]||[]),...n];a[dk]='';save();render()};
+      $('[data-one]').onsubmit=e=>{e.preventDefault();const n=nums($('[data-onein]').value);if(!n.length)return none('That one needs a number.');a[kind]=[...(a[kind]||[]),...n];save();refocus=kind;render()};
+      t.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{a[kind].splice(+b.dataset.rm,1);save();render()});}
+    else if(kind==='ab'){
+      t.querySelectorAll('[data-plus]').forEach(b=>b.onclick=()=>{const k=b.dataset.plus;a[k]=(+a[k]||0)+1;save();render()});
+      const ta=$('[data-ta]'),tb=$('[data-tb]');ta.onchange=()=>{a.a=Math.max(0,+ta.value||0);save();render()};tb.onchange=()=>{a.b=Math.max(0,+tb.value||0);save();render()};
+      $('[data-addbulk]').onclick=()=>{const c=abCount(bulk.value,q);if(!(c.a+c.b))return none('No A or B picks found in that paste.');a.a=(+a.a||0)+c.a;a.b=(+a.b||0)+c.b;a[dk]='';save();render()};}
+    else{
+      $('[data-addbulk]').onclick=()=>{const p=phrases(bulk.value,q.split);if(!p.length)return none('No answers found in that paste.');a.items=[...(a.items||[]),...p];a[dk]='';save();render()};
+      $('[data-one]').onsubmit=e=>{e.preventDefault();const v=$('[data-onein]').value.trim();if(!v)return;ignore=ignore.filter(x=>x!==v.toLowerCase());a.items=[...(a.items||[]),v];save();refocus=kind;render()};
+      t.querySelectorAll('[data-rmw]').forEach(b=>b.onclick=()=>{const k=b.dataset.rmw;a.items=(a.items||[]).filter(x=>x.toLowerCase()!==k);if(!ignore.includes(k))ignore.push(k);save();render()});}});}
+
+/* ---------- portrait ---------- */
+const EXAMPLE={langs:{vals:[3,2,4,3,2,1,3,4,2,3]},cities:{vals:[2,4,3,1,5,2,3,2,6,1]},cups:{vals:[3,2,1,4,2,0,3,2,1,2]},
+ word:{items:["saudade","jugaad","hygge","sukoon","ennui","jaan","shukriya","merci","nanna","pakka","vanakkam","jugaad"]},
+ comfort:{items:["biryani","mac and cheese","dal rice","dosa","biryani","khichdi","chowder","curd rice","ramen","biryani","poutine","pongal"]},
+ chai:{a:6,b:4},owl:{a:3,b:7},home:{items:["Guntur","Hyderabad","Bangor","Coimbatore","Nagpur","Plano","Vijayawada","Kolkata","Atlanta","Mysuru"]}};
+function portraitHTML(){
+  const Q=order();const real=Q.some(has);const src=real?ans:EXAMPLE;
+  const got=q=>{const a=src[q.id];if(!a)return false;if(q.kind==='num')return(a.vals||[]).length>0;if(q.kind==='ab')return(+a.a||0)+(+a.b||0)>0;return(a.items||[]).length>0};
+  const qs=(real?Q:BANK.filter(q=>EXAMPLE[q.id])).filter(got);
+  const s=startDate();const lt=ZONES.map(([,tz,short])=>({short,tz}));
+  const early=lt.reduce((x,y)=>offsetMin(s,y.tz)<offsetMin(s,x.tz)?y:x),late=lt.reduce((x,y)=>offsetMin(s,y.tz)>offsetMin(s,x.tz)?y:x);
+  const day=s.toLocaleDateString('en-US',{timeZone:HOME,month:'long',day:'numeric',year:'numeric'});
+  const nums_=qs.filter(q=>q.kind==='num'),words=qs.filter(q=>q.kind==='words'),abs=qs.filter(q=>q.kind==='ab'),places=qs.filter(q=>q.kind==='places');
+  const tiles=nums_.map(q=>{const t=sum(src[q.id].vals);return`<div class="tile"><span class="v">${fmtN(q.yearly?t*365:t)}</span><span class="k">${esc(q.label)}</span>${q.yearly?`<span class="s">${fmtN(t)} a day</span>`:''}</div>`});
+  tiles.push(`<div class="tile clockt"><span class="v">${tfmt(s,early.tz)} → ${tfmt(s,late.tz)}</span><span class="k">one call, from ${early.short} to ${late.short}</span><span class="s">${hrs((offsetMin(s,late.tz)-offsetMin(s,early.tz))/60)} hours apart, and nobody asked for a status update</span></div>`);
+  const main=words[0];
+  return`<div class="portrait" id="portrait">
+    ${real?'':'<span class="example">Example</span>'}
+    <div class="ptop"><div><span class="label">team portrait</span><h2>This is <b>Team VeriFidity</b>.</h2></div><p class="meta">${esc(day)}<br>${people?`${people} of us across`:'Across'} ${ZONES.length} time zones</p></div>
+    <div class="tiles">${tiles.join('')}</div>
+    ${main||abs.length?`<div class="pgrid">${main?`<div class="pblock"><h3>${esc(main.label)}</h3>${cloudHTML(tally(src[main.id].items))}</div>`:'<div></div>'}
+      ${abs.length?`<div class="pblock"><h3>This or that</h3><div class="bars">${abs.map(q=>{const a=+src[q.id].a||0,b=+src[q.id].b||0;return`<div class="bar"><div class="lbl"><span>${esc(q.a)} ${a}</span><span>${b} ${esc(q.b)}</span></div>${splitBar(q,a,b)}</div>`}).join('')}</div></div>`:''}</div>`:''}
+    ${words.slice(1).map(q=>`<div class="pblock"><h3>${esc(q.label)}</h3>${cloudHTML(tally(src[q.id].items),30)}</div>`).join('')}
+    ${places.map(q=>{const tl=tally(src[q.id].items);return`<div class="pblock"><h3>${esc(q.label)}</h3><p class="places"><b>${tl.length} different places.</b> ${tl.map(w=>esc(w.t)).join(' · ')}</p></div>`}).join('')}
+    <p class="pfoot">Made at The Unstandup, together in Teams chat. No names, no story points, just us.</p></div>`;}
+function renderPortrait(){view.innerHTML=portraitHTML()}
+
+/* the portrait as a picture: shown in place, with copy and right-click save (the page can't download files itself) */
+let h2c=null;
+function loadH2C(){return h2c||(h2c=new Promise((res,rej)=>{if(window.html2canvas)return res(window.html2canvas);const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=()=>res(window.html2canvas);s.onerror=()=>{h2c=null;rej(new Error('load'))};document.head.appendChild(s)}))}
+async function snapPortrait(st){if(!st)return;st.textContent='Making the image…';
+  let holder=null;
+  try{const hc=await loadH2C();holder=document.createElement('div');holder.className='snaphold';holder.innerHTML=portraitHTML();document.body.appendChild(holder);
+    try{await document.fonts.ready}catch(e){}
+    const cv=await hc(holder,{backgroundColor:'#1A1446',scale:2,logging:false,useCORS:true});holder.remove();holder=null;
+    const url=cv.toDataURL('image/png');
+    st.innerHTML=`<img class="snap" alt="Team VeriFidity portrait" src="${url}"><div class="row"><button class="btn sm" data-copyimg>Copy image</button><span data-copyst>Or right-click the image and choose Save image as.</span></div>`;
+    const cb=st.querySelector('[data-copyimg]'),cs=st.querySelector('[data-copyst]');
+    cb.onclick=async()=>{try{const blob=await new Promise(r=>cv.toBlob(r,'image/png'));const W=st.ownerDocument.defaultView;await W.navigator.clipboard.write([new W.ClipboardItem({'image/png':blob})]);cs.textContent='Copied. Paste it into the team channel.'}
+      catch(e){cs.textContent='Copying isn’t allowed here. Right-click the image and choose Copy image or Save image as.'}};
+  }catch(e){if(holder)holder.remove();st.textContent='The image couldn’t be made here. A screenshot of the Team portrait tab works just as well.'}}
+
+/* ---------- host notes ---------- */
+function setupHTML(){
+  const groups=['num','words','ab','places'];const n=sel.length;
+  return`<div class="msg wide"><span class="label">1 · when and who</span><h3>Meeting time</h3>
+    <div class="when"><label><span class="label">date</span><input type="date" id="mDate" value="${esc(when.date)}"></label>
+    <label><span class="label">start, Topsham time</span><input type="time" id="mTime" step="900" value="${esc(when.time)}"></label>
+    <label><span class="label">people on the call</span><input type="number" id="mPeople" min="0" inputmode="numeric" placeholder="day of" value="${esc(people)}" style="width:8em"></label></div>
+    <p class="gapnote" id="gapNote">${gapNote()}</p>
+    <p class="fine">The people count shows on the portrait. Leave it blank and the portrait just says “Across 5 time zones.”</p></div>
+   <div class="msg wide"><span class="label">2 · questions</span><h3>${n} question${n===1?'':'s'}, about ${Math.max(1,n*2)} minutes</h3>
+    <p class="fine">Each takes about two minutes, so eight makes a good 20-minute break. Mix the kinds so the portrait has a little of everything.</p>
+    <div class="bank">${groups.map(k=>`<div class="group"><h3>${KINDS[k].h}</h3><p class="becomes">${KINDS[k].becomes}</p>
+     ${BANK.filter(q=>q.kind===k).map(q=>`<label class="qpick"><input type="checkbox" data-id="${q.id}"${sel.includes(q.id)?' checked':''}><span>${esc(q.kind==='ab'?`${q.a} or ${q.b}?`:q.q)}${has(q)?'<span class="done">answered</span>':''}</span></label>`).join('')}</div>`).join('')}</div>
+    <div class="row"><button class="btn sm ghost" id="clear">Clear all answers</button><button class="btn sm" id="toPlay"${n?'':' disabled'}>Go to Play</button><span class="status" id="cst"></span></div>
+    <p class="fine">Answers stay in this browser, on the computer you run it from. Nothing is stored online, and no names are kept. Clear old answers before a new meeting.</p></div>`;}
+function wireSetup(){
+  const d=document.getElementById('mDate'),t=document.getElementById('mTime'),pp=document.getElementById('mPeople');
+  const upd=()=>{if(!d.value||!t.value)return;when={date:d.value,time:t.value};store.set('cg-when',when);drawZones();document.getElementById('gapNote').innerHTML=gapNote()};
+  d.onchange=t.onchange=upd;
+  pp.oninput=()=>{people=String(pp.value||'').replace(/\D/g,'');store.set('cg2-people',people)};
+  view.querySelectorAll('[data-id]').forEach(c=>c.onchange=()=>{const id=c.dataset.id;sel=c.checked?[...new Set([...sel,id])]:sel.filter(x=>x!==id);save();render()});
+  document.getElementById('toPlay').onclick=()=>{qi=-1;store.set('cg2-qi',qi);go('play')};
+  const cl=document.getElementById('clear');let disarm=null;
+  cl.onclick=()=>{if(!cl.dataset.arm){cl.dataset.arm=1;cl.textContent='Tap again to clear';disarm=setTimeout(()=>{if(cl.isConnected){delete cl.dataset.arm;cl.textContent='Clear all answers'}},3000);return}
+    clearTimeout(disarm);ans={};ignore=[];step={};qi=-1;store.set('cg2-qi',qi);save();render();const st=document.getElementById('cst');if(st)st.textContent='Cleared. Fresh start.'};}
+
+function renderHost(){const s=startDate();
+  const day=s.toLocaleDateString('en-US',{timeZone:HOME,weekday:'long',month:'long',day:'numeric'});
+  const invite=`Team VeriFidity, you're invited to The Unstandup.
+
+Same call, opposite agenda. Twenty minutes, a few light questions, answered together in Teams chat. No blockers, no updates, no story points. At the end, every answer comes together in a portrait of the team: how many languages we speak, what we eat for comfort, where we all started out.
+
+Nobody gets put on the spot, and "pass" is always fine.
+
+${day}, ${tfmt(s,HOME)} ET (${tfmt(s,'Asia/Kolkata')} in India, ${tfmt(s,'America/Halifax')} in Halifax, ${tfmt(s,'America/Chicago')} in Texas, ${tfmt(s,'America/Los_Angeles')} in Seattle).`;
+  const open=`Welcome to The Unstandup! Same call, opposite agenda. I'll post each question here. For number questions, guess the team total first and hold it until the timer says SEND. Everything else, answer whenever you're ready. Pass is always fine.`;
+  const close=`That's a wrap on The Unstandup. This is Team VeriFidity. Thanks for playing, and thank you, India, for staying late with us.`;
+  const hs=remoteOn()?'Host controls are open in their own window.':popupOpen()?'Click Connect in the controls window. If it doesn’t respond, close it. The panel on this page works either way, and H shows or hides it.':blocked?'This browser won’t open a second window here, so the controls are in a panel on this page. It shows on the share while it’s open, so press H to hide it between entries.':'';
+  view.innerHTML=`<div class="host"><p class="msg wide" style="flex-direction:row;gap:10px;align-items:center;background:transparent;border-style:dashed"><span class="label" style="color:var(--gold)">just for you</span><span class="fine" style="margin:0">This tab is your notes and settings. Share the Play and Team portrait tabs only.</span></p>
+   <div class="msg wide"><span class="label">0 · host controls</span><h3>Keep the controls off the shared screen</h3>
+    <p class="fine">The question markers, the countdown and the answer boxes live in host controls. They open as a panel on this page. In a browser that allows it, you can move them into their own window instead, then share only this page's window in Teams.</p>
+    <div class="row"><button class="btn" id="openPanel">${drawer&&!remoteOn()?'Panel is open':'Open the panel'}</button><button class="btn sm ghost" id="openHost">${popupOpen()?'Bring the window forward':'Try a separate window'}</button>${hosting()?'<button class="btn sm ghost" id="closeHost">Close controls</button>':''}</div>
+    ${hs?`<p class="status" id="hst">${hs}</p>`:''}
+    <p class="fine">Keys, anywhere on the page: <i>Space</i> starts the guess countdown · <i>→</i> next · <i>←</i> back · <i>H</i> shows or hides the panel.</p></div>
+   ${setupHTML()}
+   <div class="msg wide"><span class="label">3 · about 20 minutes</span><h3>Run of show</h3><ol>
+    <li><b>Before</b> Set the time and questions above, and clear any old answers. Do a dry run with a couple of real chat messages.</li>
+    <li><b>Start</b> Put this page on the Play tab and share it in Teams. Paste the opening message into chat. Say it out loud: pass is always fine.</li>
+    <li><b>Each question</b> In host controls, press <i>Copy question marker</i> and paste it into chat. It posts the question for anyone on a phone, and it marks where this question's answers start.</li>
+    <li><b>Number questions</b> After the marker, press <i>Space</i> for the 30-second countdown. At SEND, the guesses land in chat. Paste them into the guesses box. They stay off the shared screen. Press <i>→</i> for Real numbers, post that marker, and add the real numbers as they come in. The total climbs live, and the closest guess appears once there's a total.</li>
+    <li><b>Everything else</b> No countdown. Add answers as they arrive, pasted in bulk or one at a time, and the screen fills in live. For this-or-that, the big +1 buttons are quickest.</li>
+    <li><b>End</b> Move to Team portrait and let people take it in. In host controls, <i>Make portrait image</i> gives you a picture to copy into the team channel. Before you play, the portrait shows example answers marked Example.</li></ol>
+    <p class="fine">Copying from chat: start at your marker and take everything below it. Names, times and the marker itself are dropped. Short on time? Skip questions.</p></div>
+   <div class="msg"><span class="label">send a few days before</span><h3>Invite</h3><pre id="inv">${esc(invite)}</pre><div class="row"><button class="btn sm" data-copy="inv">Copy</button><span class="status" id="cs-inv"></span></div></div>
+   <div class="msg"><span class="label">keeping it easy</span><h3>Guardrails</h3><ul>
+    <li><i>Nobody is called on.</i> Everyone answers in chat. Anyone who wants to say more can unmute.</li>
+    <li><i>Pass is always fine.</i> Say it at the start and mean it.</li>
+    <li><i>No names on screen.</i> The page drops them, and the portrait is about the team.</li>
+    <li><i>Go first sometimes.</i> Read your own answer out, the sillier the better.</li>
+    <li><i>Calls lag.</i> Give the chat a few seconds after SEND before you copy the guesses.</li></ul></div>
+   <div class="msg"><span class="label">paste in chat at the start</span><h3>Opening message</h3><pre id="op">${esc(open)}</pre><div class="row"><button class="btn sm" data-copy="op">Copy</button><span class="status" id="cs-op"></span></div></div>
+   <div class="msg"><span class="label">with the portrait</span><h3>Closing message</h3><pre id="cl">${esc(close)}</pre><div class="row"><button class="btn sm" data-copy="cl">Copy</button><span class="status" id="cs-cl"></span></div></div>
+  </div>`;
+  view.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{const id=b.dataset.copy;const el=document.getElementById(id);const st=document.getElementById('cs-'+id);
+    try{await navigator.clipboard.writeText(el.textContent);st.textContent='Copied.'}catch(e){const r=document.createRange();r.selectNodeContents(el);const g=getSelection();g.removeAllRanges();g.addRange(r);st.textContent='Selected. Press Ctrl+C to copy.'}});
+  document.getElementById('openPanel').onclick=openPanel;
+  document.getElementById('openHost').onclick=openRemote;
+  const ch=document.getElementById('closeHost');if(ch)ch.onclick=closeHost;
+  wireSetup();}
+
+drawZones();
+render();
+})();
+
+</script>
+
+</body></html>
